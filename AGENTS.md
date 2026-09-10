@@ -1,0 +1,13 @@
+# Working on AgentOrganon
+
+Read [OrganonCore/AGENTS.md](OrganonCore/AGENTS.md) together with this file, including its linked philosophy, review methods, and [iteration rules](OrganonCore/skills/references/iteration.md). Apply the shared maintenance, independent review, wording, authorization, record, and stopping rules to outer repository work. Core's text-only delivery constraint applies to the Core repository; the outer repository deliberately supplies zero-dependency Node scripts.
+
+Keep the adopted workspace philosophy, a proposed replacement, and the Core method's constraints distinct. Use the [philosophy resolution contract](OrganonCore/skills/references/philosophy-resolution.md) and [format contract](OrganonCore/skills/references/structure.md). Outer skills pass the selected baseline through delegation. A difference from Core is not automatically a contradiction within an adopter's commitments. Compatibility alone does not warrant adoption, and conflict alone does not defeat revision reasons.
+
+The root `PHILOSOPHY.md` is a read-only symlink to the Core source, with no root derived lock. Resolve its relative references from the real source directory. Do not use philosophy management writes to replace it or reach the Core target by another path. Manage regular adopter copies; modify Core only through its applicable maintenance or absorption workflow and authorization.
+
+Scripts perform deterministic parsing, comparison, and file operations. Agents and users retain philosophical judgments, semantic version decisions, and specific adoption authorization. A prepared application plan binds inputs; it does not certify authorization or philosophical correctness. Run relevant mechanical tests and independent actual skill cases for behavior changes, preserving raw independent responses before comparison with expected boundaries.
+
+Keep changes within the authorized scope and preserve existing user work. Retain private evidence and the shared six-part records under ignored `.local/`; use `.local/iterations/merges/` for merge reports, candidates, decisions, plans, and records. Verify that the directory is ignored before writing records. English documentation is authoritative for its translations; follow [zh/AGENTS.md](zh/AGENTS.md) when maintaining the translation pair. Do not translate SKILL.md files as part of this implementation.
+
+Remote publication follows [Core's authorization rules](OrganonCore/AGENTS.md#remote-publication-authorization). Reuse authorization for its stated action, destination, and scope. An implementation request does not itself authorize a push. Do not publish an outer revision that references an unavailable Core commit.

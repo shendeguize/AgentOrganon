@@ -1,0 +1,3 @@
+[submodule "OrganonCore"]
+	path = OrganonCore
+	url = https://github.com/shendeguize/OrganonCore
