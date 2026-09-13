@@ -48,9 +48,9 @@ test('source checks cover 22 matching bilingual IDs; root mirror needs no lock',
   assert.equal(english.sections.length, 22);
   assert.deepEqual(english.sections.map(s => s.id), chinese.sections.map(s => s.id));
   assert.equal(english.sections.map(s => s.raw).join(''), english.body);
-  // Migration baselines: update only alongside an explicitly reviewed philosophy revision.
-  assert.equal(hash(english.body.replace(/^<!-- organon:id [^\n]+ -->\n/gm, '')), '7bd696f61572c63a79f58c2ba5f44673dc032b4fc9b6142f39991ce8f03a087a');
-  assert.equal(hash(chinese.body.replace(/^<!-- organon:id [^\n]+ -->\n/gm, '')), 'e4b07abafb9bace546a4a193e49e75b5f3a6f0c9a40fe261a921517bd946f24b');
+  // Core 0.1.3 after the approved Assessment clarification; change only with a reviewed text revision.
+  assert.equal(hash(english.body.replace(/^<!-- organon:id [^\n]+ -->\n/gm, '')), '41496fa241aa3c3cb6e3abc83992f904f4cbc4555f6fee935b72fc799fe06ee1');
+  assert.equal(hash(chinese.body.replace(/^<!-- organon:id [^\n]+ -->\n/gm, '')), '27d81360a31a44fa207bcee48d08b09da18d2f0d58beb592879b779ac5ad9cf5');
   assert.equal(check(CORE_FILE, { source: true }).mode, 'source');
   assert.equal(check(path.join(ROOT, 'PHILOSOPHY.md'), { source: true }).realPath, fs.realpathSync(CORE_FILE));
   assert.equal(fs.existsSync(path.join(ROOT, 'PHILOSOPHY.lock.json')), false);

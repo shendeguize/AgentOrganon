@@ -1,6 +1,6 @@
 # Working on AgentOrganon
 
-Read [OrganonCore/AGENTS.md](OrganonCore/AGENTS.md) together with this file, including its linked philosophy, review methods, and [iteration rules](OrganonCore/skills/references/iteration.md). Apply the shared maintenance, independent review, wording, authorization, record, and stopping rules to outer repository work. Core's text-only delivery constraint applies to the Core repository; the outer repository deliberately supplies zero-dependency Node scripts.
+Read [OrganonCore/AGENTS.md](OrganonCore/AGENTS.md) together with this file, including its linked philosophy, review methods, and [iteration rules](OrganonCore/skills/references/iteration.md). Apply the shared maintenance, independent review, wording, authorization, record, and stopping rules to outer repository work. Core owns Lean implementations, checking tools and shared pure parsing; the outer repository supplies philosophy-management scripts and compatible Lean forwarding entrypoints. Node tools in both repositories have no third-party dependencies.
 
 Keep the adopted workspace philosophy, a proposed replacement, and the Core method's constraints distinct. Use the [philosophy resolution contract](OrganonCore/skills/references/philosophy-resolution.md) and [format contract](OrganonCore/skills/references/structure.md). Outer skills pass the selected baseline through delegation. A difference from Core is not automatically a contradiction within an adopter's commitments. Compatibility alone does not warrant adoption, and conflict alone does not defeat revision reasons.
 

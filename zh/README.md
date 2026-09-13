@@ -13,6 +13,8 @@ AgentOrganon 在 [OrganonCore](../OrganonCore/README.md) 外提供工作区技�
 | [organon-principled-review](../skills/organon-principled-review/SKILL.md) | 按 Core 方法规定的触发条件和标准委托完整分析。 |
 | [organon-wording-review](../skills/organon-wording-review/SKILL.md) | 审查措辞；不要求哲学文件。 |
 | [organon-philosophy](../skills/organon-philosophy/SKILL.md) | 初始化、检查、导出、导入和合并采用副本。 |
+| [organon-leanify-prove](../skills/organon-leanify-prove/SKILL.md) | 在以 Lean 证明和反模型作为哲学主张的证据前，审查来源保真。 |
+| [organon-lean-natural-language](../skills/organon-lean-natural-language/SKILL.md) | 生成依据编码的回译与原文–Lean 对照稿，可选逐行解释。 |
 
 前三个技能使用显式指定的哲学路径；未指定时，依次在调用工作区的 Git 根目录、当前目录查找 `PHILOSOPHY.md`，不搜索子目录。显式路径无效即停止；默认候选均缺失时提示初始化。它们不会回退到随附的 Core 哲学。委托过程中始终以所选路径为评估基准，并分别标明待采用修订与 Core 方法约束。
 
@@ -49,6 +51,8 @@ node --test
 
 通过 `organon-philosophy merge --dry-run` 请求只读差异报告。技能调用 `classify.js`；不存在已安装的 `organon-philosophy` 可执行命令。技能文档说明候选准备、决定、恢复及应用命令。报告、候选、计划和六段合并记录保存在已忽略的 `.local/iterations/merges/`。准备好的计划绑定已审视输入和候选；输入过期则停止应用。完成准备或通过文件检查不提供采用授权。
 
+通过链接的入口调用 Lean 技能；它们是 agent 指令，不是已安装的可执行程序。证明流程使用已安装的 Lean `v4.33.1`，仅使用核心库；[运行格式](../skills/organon-leanify-prove/references/run-format.md) 说明工程结构与 `node skills/organon-leanify-prove/scripts/check.js <run-dir>` 检查器。机械通过不证明来源保真。翻译技能也可在没有原文时独立使用；通过 `--explain-lines` 请求详解附录。私有证明运行保留在已忽略的 `.local/`。
+
 私有包名为 `@shendeguize/agent-organon`，版本为 `0.1.0`。安装模式和发布不在本次实现范围内。贡献前请阅读 [AGENTS.md](../AGENTS.md)；远程发布遵循其引用的 Core 授权规则。
 
 使用[自实践与迭代协议](docs/self-iteration.md)比较方法、保留证据并完成有界迭代。
@@ -56,3 +60,5 @@ node --test
 ## 许可证
 
 MIT。
+
+两个 Lean 技能的实现、检查器及当前证据已由 [OrganonCore](../OrganonCore/lean/README.md) 维护。外层入口保留工作区基线解析并转交对应 Core 技能；既有检查命令保持兼容。

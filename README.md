@@ -13,6 +13,8 @@ English is the maintained source for this repository's documentation. See the [C
 | [organon-principled-review](skills/organon-principled-review/SKILL.md) | Delegate full analysis under the Core method's stated triggers and standards. |
 | [organon-wording-review](skills/organon-wording-review/SKILL.md) | Review wording; no philosophy file is required. |
 | [organon-philosophy](skills/organon-philosophy/SKILL.md) | Initialize, check, export, import, and merge adopted copies. |
+| [organon-leanify-prove](skills/organon-leanify-prove/SKILL.md) | Review source fidelity before using Lean proofs and countermodels as evidence about philosophical claims. |
+| [organon-lean-natural-language](skills/organon-lean-natural-language/SKILL.md) | Produce code-derived backtranslations and source–Lean manuscripts, with optional line explanations. |
 
 The first three skills use an explicitly supplied philosophy path, or look for `PHILOSOPHY.md` first at the calling workspace's Git root and then in its current directory. They do not search descendants. An invalid explicit path stops the operation; missing default candidates prompt initialization. They never fall back to the bundled Core philosophy. The selected path remains the assessment baseline through delegation; proposed revisions and Core method constraints are identified separately.
 
@@ -49,6 +51,8 @@ Initialization and export require absent output paths. `--core-only` removes the
 
 Use `organon-philosophy merge --dry-run` to request a read-only difference report. The skill invokes `classify.js`; there is no installed `organon-philosophy` executable. The skill documents candidate preparation, decisions, recovery, and application commands. Keep reports, candidates, plans, and six-part merge records in ignored `.local/iterations/merges/`. A prepared plan binds the reviewed inputs and candidate; stale inputs stop application. Preparation and successful file checks do not supply adoption authorization.
 
+Invoke the Lean skills by their linked entrypoints. They are agent instructions, not installed executables. The proof workflow uses installed Lean `v4.33.1` and only its core library; its [run format](skills/organon-leanify-prove/references/run-format.md) describes the project and `node skills/organon-leanify-prove/scripts/check.js <run-dir>` checker. Mechanical success does not certify source fidelity. The translation skill also works independently without original prose; request `--explain-lines` for a detailed appendix. Private proof runs remain in ignored `.local/`.
+
 The private package name is `@shendeguize/agent-organon`, version `0.1.0`. Installation modes and release publication are outside this implementation. Read [AGENTS.md](AGENTS.md) before contributing; remote publication follows the referenced Core authorization rules.
 
 Use the [self-practice and iteration protocol](docs/self-iteration.md) to compare methods, retain evidence, and complete a bounded iteration.
@@ -56,3 +60,5 @@ Use the [self-practice and iteration protocol](docs/self-iteration.md) to compar
 ## License
 
 MIT.
+
+The implementation of both Lean skills, their checker and current evidence now belongs to [OrganonCore](OrganonCore/lean/README.md). The outer entrypoints retain workspace-baseline resolution and forward to the corresponding Core skills; the existing checker command remains compatible.

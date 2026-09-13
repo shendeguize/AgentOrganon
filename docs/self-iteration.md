@@ -10,7 +10,7 @@ Preserve both repositories' complete current worktrees, including uncommitted ch
 - **F0 / C0:** the adopted philosophy and the criteria for this iteration. State applicability, assumptions, terms, expected observable outcomes, and important regressions before candidate implementation.
 - **M0 / M1…:** the current method and candidate method versions. Supply the chosen method separately from the fixed R0 object, including when the method's own text is the object of review.
 
-These identifiers belong to the experiment record; they add no philosophy-format fields. Keep Core text-only and outer Node scripts free of third-party dependencies. Skill organization, responsibilities, shared rules, and delegation may be challenged. A proposed philosophical revision remains a candidate until the user decides its concrete meaning.
+These identifiers belong to the experiment record; they add no philosophy-format fields. Keep Node scripts in Core and the outer repository free of third-party dependencies; Core owns the shared Lean implementation and evidence. Skill organization, responsibilities, shared rules, and delegation may be challenged. A proposed philosophical revision remains a candidate until the user decides its concrete meaning.
 
 ## Define the scope before implementation
 
