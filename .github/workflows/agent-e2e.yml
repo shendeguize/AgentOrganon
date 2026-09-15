@@ -1,0 +1,141 @@
+name: Actual agent validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: Successful trusted candidate workflow run for this exact source
+        required: true
+        type: string
+      manifest_sha256:
+        description: Approved canonical release manifest digest
+        required: true
+        type: string
+      matrix:
+        description: Validation scope
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, full]
+      probe:
+        description: Authentication/process probe only (never release evidence)
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: agent-validation-${{ github.ref }}-${{ inputs.matrix }}-${{ inputs.probe }}
+  cancel-in-progress: false
+
+jobs:
+  actual-agents:
+    if: github.repository == 'shendeguize/AgentOrganon' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/1.0.0')
+    environment: agent-validation
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        agent: [codex, claude, cursor, copilot, gemini, opencode]
+        os: ${{ fromJSON(inputs.matrix == 'full' && '["ubuntu-24.04"]' || '["ubuntu-24.04", "macos-15", "windows-2025"]') }}
+    runs-on: ${{ matrix.os }}
+    env:
+      RELEASE_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+      CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.2'
+      - name: Verify trusted source workflow before downloading artifacts
+        id: candidate
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/agents/verify-candidate.mjs --run-id "$CANDIDATE_RUN_ID"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ steps.candidate.outputs.candidate_artifact_id }}
+          merge-multiple: true
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - name: Verify approved manifest and clean source identity
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SELECTED_ATTEMPT: ${{ steps.candidate.outputs.candidate_run_attempt }}
+          SELECTED_ARTIFACT: ${{ steps.candidate.outputs.candidate_artifact_id }}
+        run: node scripts/agents/verify-candidate.mjs --run-id "$CANDIDATE_RUN_ID" --attempt "$SELECTED_ATTEMPT" --artifact-id "$SELECTED_ARTIFACT" --manifest candidate/release-manifest.json
+      - name: Set temporary agent tools directory
+        shell: bash
+        run: node -e 'require("node:fs").appendFileSync(process.env.GITHUB_ENV,"ORGANON_AGENT_TOOLS="+require("node:path").join(process.env.RUNNER_TEMP,"organon-agent-tools")+"\n")'
+      - name: Install pinned CLI in temporary home without credentials
+        shell: bash
+        run: node scripts/agents/setup.mjs --agent "${{ matrix.agent }}"
+      - name: Actual codex invocation
+        if: matrix.agent == 'codex'
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_MODEL: ${{ vars.CODEX_MODEL }}
+        run: node scripts/agents/run.mjs --agent codex --matrix "${{ inputs.matrix }}" ${{ inputs.probe && '--probe' || '' }} --package-dir candidate --manifest candidate/release-manifest.json --out "candidate/evidence/codex-${{ runner.os }}-${{ inputs.matrix }}" || test "$?" -eq 3
+      - name: Actual claude invocation
+        if: matrix.agent == 'claude'
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+        run: node scripts/agents/run.mjs --agent claude --matrix "${{ inputs.matrix }}" ${{ inputs.probe && '--probe' || '' }} --package-dir candidate --manifest candidate/release-manifest.json --out "candidate/evidence/claude-${{ runner.os }}-${{ inputs.matrix }}" || test "$?" -eq 3
+      - name: Actual cursor invocation
+        if: matrix.agent == 'cursor'
+        shell: bash
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_MODEL: ${{ vars.CURSOR_MODEL }}
+        run: node scripts/agents/run.mjs --agent cursor --matrix "${{ inputs.matrix }}" ${{ inputs.probe && '--probe' || '' }} --package-dir candidate --manifest candidate/release-manifest.json --out "candidate/evidence/cursor-${{ runner.os }}-${{ inputs.matrix }}" || test "$?" -eq 3
+      - name: Actual copilot invocation
+        if: matrix.agent == 'copilot'
+        shell: bash
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          COPILOT_MODEL: ${{ vars.COPILOT_MODEL }}
+        run: node scripts/agents/run.mjs --agent copilot --matrix "${{ inputs.matrix }}" ${{ inputs.probe && '--probe' || '' }} --package-dir candidate --manifest candidate/release-manifest.json --out "candidate/evidence/copilot-${{ runner.os }}-${{ inputs.matrix }}" || test "$?" -eq 3
+      - name: Actual gemini invocation
+        if: matrix.agent == 'gemini'
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: node scripts/agents/run.mjs --agent gemini --matrix "${{ inputs.matrix }}" ${{ inputs.probe && '--probe' || '' }} --package-dir candidate --manifest candidate/release-manifest.json --out "candidate/evidence/gemini-${{ runner.os }}-${{ inputs.matrix }}" || test "$?" -eq 3
+      - name: Actual opencode invocation
+        if: matrix.agent == 'opencode'
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL }}
+        run: node scripts/agents/run.mjs --agent opencode --matrix "${{ inputs.matrix }}" ${{ inputs.probe && '--probe' || '' }} --package-dir candidate --manifest candidate/release-manifest.json --out "candidate/evidence/opencode-${{ runner.os }}-${{ inputs.matrix }}" || test "$?" -eq 3
+      # Exit 3 means completed invocation awaiting independent review, never release approval.
+      - name: Preserve raw captured evidence including failures and pending review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: agent-${{ matrix.agent }}-${{ runner.os }}-${{ inputs.matrix }}-${{ github.run_attempt }}
+          path: candidate/evidence/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Preserve CLI installation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: agent-setup-${{ matrix.agent }}-${{ runner.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/organon-agent-tools/${{ matrix.agent }}/installation.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,99 @@
+name: Publish verified product
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact validated product version
+        required: true
+      manifest_sha256:
+        description: Canonical sealed manifest digest
+        required: true
+      operation:
+        description: Controlled publication step
+        required: true
+        type: choice
+        options: [bootstrap-bundle, publish, promote]
+      bootstrap_npm:
+        description: Use the short-lived first-publication credential
+        type: boolean
+        default: false
+      validated_run_id:
+        description: Successful seal.yml run from this exact source (initial bundle only)
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: publish-${{ inputs.version }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/release/1.0.0'
+    environment: ${{ startsWith(inputs.version, '1.0.0-rc.') && 'npm-rc' || 'npm-stable' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+      APPROVED_RC_MANIFEST_SHA256: ${{ vars.APPROVED_RC_MANIFEST_SHA256 }}
+      NPM_CHANNEL_STRATEGY: ${{ vars.NPM_CHANNEL_STRATEGY }}
+      RELEASE_OPERATION: ${{ inputs.operation }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: product
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.2'
+          registry-url: https://registry.npmjs.org
+      - name: Install exact npm with OIDC support in the temporary runner
+        run: npm install --global npm@12.0.2 --ignore-scripts
+      - name: Verify sealed artifact provenance
+        id: sealed
+        if: inputs.operation == 'bootstrap-bundle'
+        env:
+          VALIDATED_RUN: ${{ inputs.validated_run_id }}
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; import {resolveAttempt} from "./product/scripts/release/actions-artifacts.mjs"; const {run,artifacts}=resolveAttempt(process.env.VALIDATED_RUN,"seal.yml",process.env.GITHUB_SHA); fs.appendFileSync(process.env.GITHUB_OUTPUT,"artifact_id="+artifacts[0].id+"\nrun_attempt="+run.run_attempt+"\n");'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: inputs.operation == 'bootstrap-bundle'
+        with:
+          artifact-ids: ${{ steps.sealed.outputs.artifact_id }}
+          merge-multiple: true
+          run-id: ${{ inputs.validated_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - name: Bind downloaded inventory to selected seal attempt
+        if: inputs.operation == 'bootstrap-bundle'
+        env:
+          SELECTED_RUN: ${{ inputs.validated_run_id }}
+          SELECTED_ATTEMPT: ${{ steps.sealed.outputs.run_attempt }}
+        run: node --input-type=module -e 'import {readJSON} from "./product/scripts/release/lib.mjs"; import {readTrustedInventory} from "./product/scripts/release/evidence.mjs"; const {inventory}=readTrustedInventory(readJSON("candidate/release-manifest.json"),"candidate",{required:true}); if(inventory.collector.run_id!==process.env.SELECTED_RUN || inventory.collector.run_attempt!==process.env.SELECTED_ATTEMPT) throw Error("Sealed artifact belongs to another run attempt");'
+      - name: Fetch exact public validated bundle
+        if: inputs.operation != 'bootstrap-bundle'
+        run: node product/scripts/release/publish.mjs fetch --version "$RELEASE_VERSION" --manifest-sha256 "$RELEASE_MANIFEST_SHA256" --out candidate
+      - name: Verify identity and every gate before credentials are exposed
+        run: |
+          node product/scripts/release/manifest.mjs check --manifest candidate/release-manifest.json
+          node --input-type=module -e 'import {readJSON} from "./product/scripts/release/lib.mjs"; import {assertDispatch} from "./product/scripts/release/manifest.mjs"; assertDispatch(readJSON("candidate/release-manifest.json"),process.env,"agent-organon")'
+      - name: Verify approved RC to stable source transition
+        if: inputs.version == '1.0.0'
+        run: node product/scripts/release/stable.mjs --manifest candidate/release-manifest.json
+      - name: First npm publication with short-lived bootstrap credential
+        if: inputs.operation == 'publish' && inputs.bootstrap_npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
+        run: node product/scripts/release/publish.mjs publish --manifest candidate/release-manifest.json --product agent-organon
+      - name: OIDC publication or credential-free bundle operation
+        if: inputs.operation != 'promote' && !(inputs.operation == 'publish' && inputs.bootstrap_npm)
+        run: node product/scripts/release/publish.mjs "$RELEASE_OPERATION" --manifest candidate/release-manifest.json --product agent-organon
+      - name: Complete channel recommendation only after all three products match
+        if: inputs.operation == 'promote'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TAG_TOKEN }}
+        run: node product/scripts/release/publish.mjs promote --manifest candidate/release-manifest.json --product agent-organon

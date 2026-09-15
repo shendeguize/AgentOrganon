@@ -1,64 +1,59 @@
+![AgentOrganon](../assets/banner.svg)
+
+[English](../README.md) · [简体中文](README.md) · [Website](https://shendeguize.github.io/AgentOrganon/zh/) · [Releases](https://github.com/shendeguize/AgentOrganon/releases)
+
 # AgentOrganon
 
-AgentOrganon 在 [OrganonCore](../OrganonCore/README.md) 外提供工作区技能与确定性文件操作。Core 包含哲学和审查方法；外层仓库包含管理采用副本的 Node 脚本。采用方工作区可以根据用户的明确决定修订或撤回承诺。
+工作区方法与哲学管理。
 
-本仓库文档以英文为维护正本。参见[英文 README](../README.md)。
+## Design Aim · 设计目标
 
-## 技能
+让 agent 的判断与改进有依据。Organon 让承诺、理由和适用边界可读、可审查、可修订。它提供哲学和方法，不保证判断正确或自动改进；哲学采纳保留明确的人类决定。
 
-| 技能 | 职责 |
-| --- | --- |
-| [organon-assess](../skills/organon-assess/SKILL.md) | 依据所选工作区哲学评估输入。 |
-| [organon-absorb](../skills/organon-absorb/SKILL.md) | 审查修订该哲学的理由，在审查后落实已获授权的采用。 |
-| [organon-principled-review](../skills/organon-principled-review/SKILL.md) | 按 Core 方法规定的触发条件和标准委托完整分析。 |
-| [organon-wording-review](../skills/organon-wording-review/SKILL.md) | 审查措辞；不要求哲学文件。 |
-| [organon-philosophy](../skills/organon-philosophy/SKILL.md) | 初始化、检查、导出、导入和合并采用副本。 |
-| [organon-leanify-prove](../skills/organon-leanify-prove/SKILL.md) | 在以 Lean 证明和反模型作为哲学主张的证据前，审查来源保真。 |
-| [organon-lean-natural-language](../skills/organon-lean-natural-language/SKILL.md) | 生成依据编码的回译与原文–Lean 对照稿，可选逐行解释。 |
-
-前三个技能使用显式指定的哲学路径；未指定时，依次在调用工作区的 Git 根目录、当前目录查找 `PHILOSOPHY.md`，不搜索子目录。显式路径无效即停止；默认候选均缺失时提示初始化。它们不会回退到随附的 Core 哲学。委托过程中始终以所选路径为评估基准，并分别标明待采用修订与 Core 方法约束。
-
-兼容不构成采用理由，与既有承诺冲突也不单独否定修订理由。脚本检查并转换文件；agent 与用户评估含义、审查完整候选并决定采用。
-
-## 文件与版本
-
-采用方工作区使用普通文件 `PHILOSOPHY.md` 及其旁侧的 `PHILOSOPHY.lock.json`，其中 `document_filename` 标识同目录下的托管文件。[格式契约](../OrganonCore/skills/references/structure.md) 规定支持的四个 frontmatter 字段，以及每个标题及其直属正文和文首说明的稳定 ID。支持 `## Title` 这样的无缩进 ATX 标题；其他 ATX 形式和 Setext 标题会被拒绝。Core 当前的三章组织形式是初始化模板；采用方可以重组。初始化增加空 Extensions 章节，以稳定 ID `extensions` 标识，不依赖标题或位置。
-
-- `format_version` 标识支持的文件格式。不支持的格式会阻止托管写入。
-- `philosophy_version` 描述语义修订，由 agent 提议、用户决定：改变或撤回承诺、含义或适用范围使用 major；保留既有承诺的新增使用 minor；保持含义的措辞或结构维护使用 patch。
-- `core_version` 记录最后一次完整审视的 Core 来源版本。超出 `package.json` 中 `organon.coreVersion` 范围时产生来源版本警告，不构成哲学裁决。
-- `derived_from` 记录导出来源。来源信息和相同版本号都不能证明共同祖先。
-
-lock 保存已审视来源检查点的 hash、结构和拒绝记忆，不包含旧来源正文。本地内容不同于检查点是正常状态。被拒绝的来源单元在传入状态变化前不再提议，但实际差异仍可见。没有可验证来源检查点的导入采用双向差异模式，且绝不推进 Core 的已审视版本。
-
-本仓库根目录的 `PHILOSOPHY.md` 是指向 `OrganonCore/PHILOSOPHY.md` 的相对软链接，仅用于读取；相对引用从真实源文件目录解析。根目录没有派生 lock。管理脚本拒绝穿透或替换该软链接，也拒绝写入 Core 源文件。Core 变更使用其明确的维护或吸收流程。
-
-## 本地使用
-
-使用 Node.js 22，无第三方运行时依赖。以下命令在本仓库执行，并要求 OrganonCore 子模块已存在。从其他目录操作时，使用脚本的绝对路径。目标的父目录必须已存在。在 Git 工作区中，初始化前先忽略 `.local/`，使恢复日志保持私有；脚本会在需要时创建日志目录。
+## 开始使用
 
 ```sh
-node scripts/check.js --source OrganonCore/PHILOSOPHY.md
-node scripts/check.js --source PHILOSOPHY.md
-node scripts/init.js --target /path/to/workspace/PHILOSOPHY.md
-node scripts/check.js /path/to/workspace/PHILOSOPHY.md
-node scripts/export.js --source /path/to/workspace/PHILOSOPHY.md --out /path/to/export.md
-node scripts/export.js --source /path/to/workspace/PHILOSOPHY.md --out /path/to/core-part.md --core-only
-node --test
+npx --yes @shendeguize/agent-organon@1.0.0-rc.1 install --product agent-organon --agent codex --scope project --project /path/to/workspace --version 1.0.0-rc.1
 ```
 
-初始化和导出要求输出路径尚不存在。`--core-only` 删除由 `extensions` 标识的子树；标记缺失即停止导出。剩余文本仍属于采用方，不是官方 Core 副本。来源身份是调用方提供的标签或已保存的文档身份，不是经过认证的发布者身份。托管操作发现输入存在未完成事务时会停止，包括初始化、导出和分类时的读取；恢复操作后再继续，使用报告中给出的恢复命令。
+候选发行版 **1.0.0-rc.1** 等待审核。公开包可用后执行上述命令；发行前使用本地候选包。需要 Node.js 22+。支持项目或全局安装；六种 agent 适配的真实验证状态见发行矩阵。
 
-通过 `organon-philosophy merge --dry-run` 请求只读差异报告。技能调用 `classify.js`；不存在已安装的 `organon-philosophy` 可执行命令。技能文档说明候选准备、决定、恢复及应用命令。报告、候选、计划和六段合并记录保存在已忽略的 `.local/iterations/merges/`。准备好的计划绑定已审视输入和候选；输入过期则停止应用。完成准备或通过文件检查不提供采用授权。
+[完整快速开始：安装 → 检查 → 选择哲学 → 只读评估](https://shendeguize.github.io/AgentOrganon/zh/quick-start)
 
-通过链接的入口调用 Lean 技能；它们是 agent 指令，不是已安装的可执行程序。证明流程使用已安装的 Lean `v4.33.1`，仅使用核心库；[运行格式](../skills/organon-leanify-prove/references/run-format.md) 说明工程结构与 `node skills/organon-leanify-prove/scripts/check.js <run-dir>` 检查器。机械通过不证明来源保真。翻译技能也可在没有原文时独立使用；通过 `--explain-lines` 请求详解附录。私有证明运行保留在已忽略的 `.local/`。
+## 阅读与仓库结构
 
-私有包名为 `@shendeguize/agent-organon`，版本为 `0.1.0`。安装模式和发布不在本次实现范围内。贡献前请阅读 [AGENTS.md](../AGENTS.md)；远程发布遵循其引用的 Core 授权规则。
+| 入口 | 内容 |
+| --- | --- |
+| [AgentOrganon](https://github.com/shendeguize/AgentOrganon) | 工作区技能及已采纳副本的管理。 |
+| [OrganonCore](https://github.com/shendeguize/OrganonCore) | 核心哲学、审查方法与 Lean 证据。 |
+| [AdvisedOrganons](https://github.com/shendeguize/AdvisedOrganons) | 领域哲学集合；明确选择领域后使用。 |
+| [Docs](https://shendeguize.github.io/AgentOrganon/zh/understand) | 帮助读者理解概念、操作及能力边界。 |
+| [Philosophy](https://shendeguize.github.io/AgentOrganon/zh/philosophy) | 已采纳承诺及其含义与条件。 |
+| [Lean](https://shendeguize.github.io/AgentOrganon/zh/lean) | 主张速览及代码与解释的左右对照。 |
 
-使用[自实践与迭代协议](docs/self-iteration.md)比较方法、保留证据并完成有界迭代。
+发布包仅包含哲学、非 Lean skills 及运行所需文件。网站、教程、Lean 工程与证据仍在源码中维护。Rationale 独立于人读 docs，不增加哲学义务；维护协议位于 maintenance。
 
-## 许可证
 
-MIT。
+## 选择方法
 
-两个 Lean 技能的实现、检查器及当前证据已由 [OrganonCore](../OrganonCore/lean/README.md) 维护。外层入口保留工作区基线解析并转交对应 Core 技能；既有检查命令保持兼容。
+| 方法 | 用途 |
+| --- | --- |
+| `organon-assess` | 按所选哲学评估输入。 |
+| `organon-absorb` | 检查哲学修订理由，并实施已授权的采纳。 |
+| `organon-principled-review` | 按共享方法已说明的标准分析对象。 |
+| `organon-wording-review` | 审查措辞，不决定哲学采纳。 |
+| `organon-philosophy` | 管理哲学副本、版本及文件操作。 |
+
+## 星标历史
+
+![当前仓库真实星标总数历史](https://shendeguize.github.io/AgentOrganon/assets/stars.svg)
+
+从启用日起每日记录真实总数。零值、取消星标和缺失采样如实保留；图中注明更新时间。
+
+源码检出后的操作：[工作区文件与脚本参考](docs/workspace-reference.md)。
+
+## 参与维护
+
+维护前阅读仓库的 agent 指导与维护协议。机械检查、独立审查和人类采纳决定具有不同职责。
+
+MIT · [License](../LICENSE)

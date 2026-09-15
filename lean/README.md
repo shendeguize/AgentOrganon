@@ -7,8 +7,8 @@ The outer [formalization skill](../skills/organon-leanify-prove/SKILL.md), [tran
 From the outer repository root, for example:
 
 ```sh
-rtk proxy node skills/organon-leanify-prove/scripts/check.js OrganonCore/lean/core-v0.1.3/philosophy --manuscript manuscript.json
-rtk proxy node skills/organon-leanify-prove/scripts/check.js OrganonCore/lean/core-v0.1.3/rationale-core-tools --manuscript manuscript.json
+rtk proxy node skills/organon-leanify-prove/scripts/check.js OrganonCore/lean/philosophy --manuscript manuscript.json
+rtk proxy node skills/organon-leanify-prove/scripts/check.js OrganonCore/lean/rationale --manuscript manuscript.json
 ```
 
-Caller-owned run paths remain explicit; paths are not silently redirected. See [current migration validation](../OrganonCore/lean/VALIDATION.md) and [the preceding historical validation](../OrganonCore/lean/history/reader-validation-before-migration.md). Historical frozen inputs and judgments are preserved inside Core; a replayable old theorem is not current-source approval.
+Caller-owned run paths remain explicit; paths are not silently redirected. See [current validation](../OrganonCore/lean/VALIDATION.md). Historical frozen inputs and judgments are archived under Core’s ignored `.local/`; the formal delivery and its tests use only current objects and their required evidence.

@@ -1,3 +1,6 @@
 [submodule "OrganonCore"]
 	path = OrganonCore
 	url = https://github.com/shendeguize/OrganonCore
+[submodule "AdvisedOrganons"]
+	path = AdvisedOrganons
+	url = https://github.com/shendeguize/AdvisedOrganons.git
