@@ -1,3 +1,3 @@
 # Lean validation
 
-Current results are maintained in [Core migration validation](../OrganonCore/lean/VALIDATION.md). The [preceding reader validation](../OrganonCore/lean/history/reader-validation-before-migration.md) is historical.
+Current results are maintained in [Core validation](../OrganonCore/lean/VALIDATION.md). Historical validation is archived under Core’s ignored `.local/` and is not a dependency of the formal delivery.

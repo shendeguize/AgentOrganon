@@ -1,6 +1,6 @@
 # Self-practice and bounded iteration
 
-Use this protocol to practice AgentOrganon's five outer skills and their delegated Core methods on this repository, compare alternatives, and complete an evidence-based iteration. Judgment quality has priority; justified stability is a valid outcome. Follow [AGENTS.md](../AGENTS.md) and the [shared iteration rules](../OrganonCore/skills/references/iteration.md). This protocol is a revisable method, not an additional philosophical commitment or proof of the philosophy.
+Use this protocol to practice the five AgentOrganon outer skills in the case set below and their delegated Core methods on this repository, compare alternatives, and complete an evidence-based iteration. Judgment quality has priority; justified stability is a valid outcome. Follow [AGENTS.md](../AGENTS.md) and the [shared iteration rules](../OrganonCore/skills/references/iteration.md). This protocol is a revisable method, not an additional philosophical commitment or proof of the philosophy.
 
 ## Freeze the object, philosophy, criteria, and methods
 
@@ -45,6 +45,8 @@ Run every included case under a generic task prompt, M0, and each selected candi
 Keep the model, reasoning configuration, inputs, and tool conditions the same. Independently run each case under each method three times and rotate group order. For full coverage, two challengers produce an initial comparison of **17 × 4 × 3 = 204 task runs**, excluding review and revision retests. Derive a targeted stage's counts from its confirmed cases and stage structure; distinguish logical tasks from execution calls. Each case × method version × repetition requires a fresh context and separate copy, or a verifiably equivalent restoration.
 
 Inspect automatic instruction loading and expected-answer leakage. Preserve the actual loaded materials. If a comparison cannot isolate the intended difference, label it unidentifiable and make no gain claim from it. Execution agents must not receive expected conclusions. Save every raw response, tool trace, failure, and before/after file state before comparison; do not select only a group's best response.
+
+Before execution, define run-validity, exclusion, replacement, and stopping rules. Validity depends on the predefined experimental conditions, not task success. A task failure, failure to follow the method, or agent-caused tool misuse under those conditions still counts. Exclude an attempt only when identifiable evidence establishes that incorrect inputs or configuration supplied by the experimenter, an external interruption, or contamination prevented the intended comparison. Preserve every attempt, its validity judgment and grounds, and any associated method failure. If validity remains unresolved, do not exclude the attempt or claim gain from the affected comparison. Replace only excluded or missing repetitions within the authorized scope and stopping rules; replacement neither erases a failure nor resets the revision limit.
 
 Independent reviewers first judge the raw task and grounds, then compare outputs with method-version labels hidden, and only afterward receive the author's rationale. They report grounds and disagreements rather than voting. Exposure learned during comparison must not be represented as an independent first judgment.
 

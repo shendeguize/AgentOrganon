@@ -1,64 +1,59 @@
+![AgentOrganon](assets/banner.svg)
+
+[English](README.md) · [简体中文](zh/README.md) · [Website](https://shendeguize.github.io/AgentOrganon/) · [Releases](https://github.com/shendeguize/AgentOrganon/releases)
+
 # AgentOrganon
 
-AgentOrganon supplies workspace skills and deterministic file operations around [OrganonCore](OrganonCore/README.md). Core contains the philosophy and review methods; this outer repository contains the Node scripts that manage adopted copies. The adopting workspace may revise or withdraw commitments with an explicit user decision.
+Workspace methods and philosophy management.
 
-English is the maintained source for this repository's documentation. See the [Chinese translation](zh/README.md).
+## Design Aim · Ground agent judgments and improvements
 
-## Skills
+Make commitments, reasons and boundaries readable, assessable and revisable. Organon supplies philosophy and methods; it does not promise correct judgments or automatic improvement. Philosophical adoption retains an explicit human decision.
 
-| Skill | Responsibility |
-| --- | --- |
-| [organon-assess](skills/organon-assess/SKILL.md) | Assess an input against the selected workspace philosophy. |
-| [organon-absorb](skills/organon-absorb/SKILL.md) | Examine reasons for revising that philosophy and implement authorized adoption after review. |
-| [organon-principled-review](skills/organon-principled-review/SKILL.md) | Delegate full analysis under the Core method's stated triggers and standards. |
-| [organon-wording-review](skills/organon-wording-review/SKILL.md) | Review wording; no philosophy file is required. |
-| [organon-philosophy](skills/organon-philosophy/SKILL.md) | Initialize, check, export, import, and merge adopted copies. |
-| [organon-leanify-prove](skills/organon-leanify-prove/SKILL.md) | Review source fidelity before using Lean proofs and countermodels as evidence about philosophical claims. |
-| [organon-lean-natural-language](skills/organon-lean-natural-language/SKILL.md) | Produce code-derived backtranslations and source–Lean manuscripts, with optional line explanations. |
-
-The first three skills use an explicitly supplied philosophy path, or look for `PHILOSOPHY.md` first at the calling workspace's Git root and then in its current directory. They do not search descendants. An invalid explicit path stops the operation; missing default candidates prompt initialization. They never fall back to the bundled Core philosophy. The selected path remains the assessment baseline through delegation; proposed revisions and Core method constraints are identified separately.
-
-Compatibility does not establish a reason for adoption, and conflict with an existing commitment does not by itself defeat reasons to revise it. Scripts check and transform files. Agents and users assess meaning, review the candidate as a whole, and decide adoption.
-
-## Files and versions
-
-An adopting workspace uses a regular `PHILOSOPHY.md` and adjacent `PHILOSOPHY.lock.json`, whose `document_filename` identifies the managed file in that directory. The [format contract](OrganonCore/skills/references/structure.md) defines the four supported frontmatter fields and stable IDs for every heading with its direct body and for introductory text. It supports unindented ATX headings such as `## Title`; other ATX forms and Setext headings are rejected. The current three-chapter Core organization is an initialization template; adopters may reorganize it. Initialization adds an empty Extensions section, identified by stable ID `extensions` rather than its title or position.
-
-- `format_version` identifies the supported file format. Unsupported formats stop managed writes.
-- `philosophy_version` describes semantic revision, proposed by an agent and decided by the user: changed or withdrawn commitments, meanings, or applicability require major; additions preserving existing commitments require minor; meaning-preserving wording or structural maintenance requires patch.
-- `core_version` records the last fully reviewed Core source version. A version outside `package.json`'s `organon.coreVersion` range produces a source-version warning, not a philosophical verdict.
-- `derived_from` records export provenance. Neither provenance nor matching versions establishes a common ancestor.
-
-The lock stores hashes and structure for reviewed source checkpoints, plus remembered declines. It contains no old source text. Local differences from a checkpoint are expected. A declined source unit is not proposed again until its incoming state changes; the actual difference remains visible. Imports with no verifiable source checkpoint use two-way differences and never advance Core's reviewed version.
-
-This repository's root `PHILOSOPHY.md` is a relative symlink to `OrganonCore/PHILOSOPHY.md`, used only for reading; relative references resolve from the real source directory. There is no root derived lock. Management scripts reject writes through or over this symlink and writes to the Core source. Core changes use its explicit maintenance or absorption workflow.
-
-## Local use
-
-Use Node.js 22; there are no third-party runtime dependencies. Run these commands from this checkout, with the OrganonCore submodule present. Use absolute script paths when working from another directory. The target's parent directory must already exist. In a Git workspace, ignore `.local/` before initialization so recovery journals remain private; the scripts create the journal directory when needed.
+## Start here
 
 ```sh
-node scripts/check.js --source OrganonCore/PHILOSOPHY.md
-node scripts/check.js --source PHILOSOPHY.md
-node scripts/init.js --target /path/to/workspace/PHILOSOPHY.md
-node scripts/check.js /path/to/workspace/PHILOSOPHY.md
-node scripts/export.js --source /path/to/workspace/PHILOSOPHY.md --out /path/to/export.md
-node scripts/export.js --source /path/to/workspace/PHILOSOPHY.md --out /path/to/core-part.md --core-only
-node --test
+npx --yes @shendeguize/agent-organon@1.0.0-rc.1 install --product agent-organon --agent codex --scope project --project /path/to/workspace --version 1.0.0-rc.1
 ```
 
-Initialization and export require absent output paths. `--core-only` removes the subtree identified by `extensions`; a missing marker stops export. The remaining text is still the adopter's text, not an official Core copy. Source identities are caller-supplied labels or stored document identities, not authenticated publisher identities. Managed operations, including reads for initialization, export, and classification, stop when an input has a pending transaction; use the reported recovery command before resuming.
+Release candidate **1.0.0-rc.1** awaits review. Run this command once the public package is available; before publication use a local candidate archive. Requires Node.js 22+. Project and global installation are available; the release matrix records actual validation for the six agent adapters.
 
-Use `organon-philosophy merge --dry-run` to request a read-only difference report. The skill invokes `classify.js`; there is no installed `organon-philosophy` executable. The skill documents candidate preparation, decisions, recovery, and application commands. Keep reports, candidates, plans, and six-part merge records in ignored `.local/iterations/merges/`. A prepared plan binds the reviewed inputs and candidate; stale inputs stop application. Preparation and successful file checks do not supply adoption authorization.
+[Complete quick start: install → check → select philosophy → read-only assessment](https://shendeguize.github.io/AgentOrganon/quick-start)
 
-Invoke the Lean skills by their linked entrypoints. They are agent instructions, not installed executables. The proof workflow uses installed Lean `v4.33.1` and only its core library; its [run format](skills/organon-leanify-prove/references/run-format.md) describes the project and `node skills/organon-leanify-prove/scripts/check.js <run-dir>` checker. Mechanical success does not certify source fidelity. The translation skill also works independently without original prose; request `--explain-lines` for a detailed appendix. Private proof runs remain in ignored `.local/`.
+## Read and navigate
 
-The private package name is `@shendeguize/agent-organon`, version `0.1.0`. Installation modes and release publication are outside this implementation. Read [AGENTS.md](AGENTS.md) before contributing; remote publication follows the referenced Core authorization rules.
+| Entry | Content |
+| --- | --- |
+| [AgentOrganon](https://github.com/shendeguize/AgentOrganon) | Workspace skills and management of adopted copies. |
+| [OrganonCore](https://github.com/shendeguize/OrganonCore) | Core philosophy, review methods and Lean evidence. |
+| [AdvisedOrganons](https://github.com/shendeguize/AdvisedOrganons) | Domain philosophy collection; select a domain explicitly. |
+| [Docs](https://shendeguize.github.io/AgentOrganon/understand) | Concepts, operations and capability boundaries for readers. |
+| [Philosophy](https://shendeguize.github.io/AgentOrganon/philosophy) | Adopted commitments with their meanings and conditions. |
+| [Lean](https://shendeguize.github.io/AgentOrganon/lean) | Claim overviews and paired code with line explanations. |
 
-Use the [self-practice and iteration protocol](docs/self-iteration.md) to compare methods, retain evidence, and complete a bounded iteration.
+Release packages contain philosophy, non-Lean skills and required runtime files. Websites, tutorials, Lean projects and evidence remain in source. Rationale is separate from reader documentation and adds no philosophical obligations; maintenance protocols live in maintenance.
 
-## License
 
-MIT.
+## Choose a method
 
-The implementation of both Lean skills, their checker and current evidence now belongs to [OrganonCore](OrganonCore/lean/README.md). The outer entrypoints retain workspace-baseline resolution and forward to the corresponding Core skills; the existing checker command remains compatible.
+| Method | Purpose |
+| --- | --- |
+| `organon-assess` | Assess an input under the selected philosophy. |
+| `organon-absorb` | Examine reasons for philosophical revision and carry out authorized adoption. |
+| `organon-principled-review` | Analyze an object under the shared method’s stated standards. |
+| `organon-wording-review` | Review wording without deciding philosophical adoption. |
+| `organon-philosophy` | Manage philosophy copies, versions and file operations. |
+
+## Star history
+
+![Observed total stars for this repository](https://shendeguize.github.io/AgentOrganon/assets/stars.svg)
+
+Daily observations begin when collection is enabled. Zero totals, unstars and missing samples are retained; the chart reports its update time.
+
+Source-checkout operations: [workspace files and script reference](docs/workspace-reference.md).
+
+## Contribute
+
+Read the repository’s agent guidance and maintenance protocols before contributing. Mechanical checks, independent review and human adoption decisions have distinct responsibilities.
+
+MIT · [License](LICENSE)
