@@ -124,8 +124,9 @@ test('npm offline installation registers the sole working organon executable', t
   assert.equal(result.status, 0, result.stderr);
   const bin = path.join(s.project, 'node_modules/.bin', process.platform === 'win32' ? 'organon.cmd' : 'organon');
   assert.ok(fs.existsSync(bin));
-  const entrypoint = process.platform === 'win32' ? path.join(s.project, 'node_modules/@shendeguize/agent-organon/installer/organon.mjs') : bin;
-  const help = spawnSync(process.execPath, [entrypoint, '--help'], { env: s.env, cwd: s.project, encoding: 'utf8' });
+  const help = process.platform === 'win32'
+    ? spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '& $env:ORGANON_TEST_BIN --help'], { env: { ...s.env, ORGANON_TEST_BIN: bin }, cwd: s.project, encoding: 'utf8' })
+    : spawnSync(process.execPath, [bin, '--help'], { env: s.env, cwd: s.project, encoding: 'utf8' });
   assert.equal(help.status, 0, help.stderr); assert.match(JSON.parse(help.stdout).help, /install\|check\|init/);
 });
 
