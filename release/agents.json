@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "verified_documentation_date": "2026-09-15",
+  "agents": {
+    "codex": {
+      "npm": "@openai/codex",
+      "version": "0.154.0",
+      "secret": "OPENAI_API_KEY",
+      "child_secret": "CODEX_API_KEY",
+      "model_env": "CODEX_MODEL",
+      "documentation": "https://learn.chatgpt.com/docs/non-interactive-mode"
+    },
+    "claude": {
+      "npm": "@anthropic-ai/claude-code",
+      "version": "2.1.272",
+      "secret": "ANTHROPIC_API_KEY",
+      "child_secret": "ANTHROPIC_API_KEY",
+      "model_env": "ANTHROPIC_MODEL",
+      "documentation": "https://code.claude.com/docs/en/headless"
+    },
+    "cursor": {
+      "version": "2026.09.10-fd3934a",
+      "secret": "CURSOR_API_KEY",
+      "child_secret": "CURSOR_API_KEY",
+      "model_env": "CURSOR_MODEL",
+      "documentation": "https://cursor.com/docs/cli/reference/parameters",
+      "installers": {
+        "unix": {
+          "url": "https://cursor.com/install",
+          "sha256": "bb54a2c0c13a936faab47355edd7125ec43a203af5610175ab39f5571df16e74"
+        },
+        "win32": {
+          "url": "https://cursor.com/install?win32=true",
+          "sha256": "07a9dad237540f9077a2d66cdf1deb558c4d27b86e43aa1f1a55ea52880a0a68"
+        }
+      }
+    },
+    "copilot": {
+      "npm": "@github/copilot",
+      "version": "1.0.83",
+      "secret": "COPILOT_GITHUB_TOKEN",
+      "child_secret": "COPILOT_GITHUB_TOKEN",
+      "model_env": "COPILOT_MODEL",
+      "documentation": "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-programmatic-reference"
+    },
+    "gemini": {
+      "npm": "@google/gemini-cli",
+      "version": "0.59.0",
+      "secret": "GEMINI_API_KEY",
+      "child_secret": "GEMINI_API_KEY",
+      "model_env": "GEMINI_MODEL",
+      "documentation": "https://geminicli.com/docs/cli/headless/"
+    },
+    "opencode": {
+      "npm": "opencode-ai",
+      "version": "1.18.31",
+      "secret": "OPENAI_API_KEY",
+      "child_secret": "OPENAI_API_KEY",
+      "model_env": "OPENCODE_MODEL",
+      "documentation": "https://opencode.ai/docs/cli/"
+    }
+  }
+}
