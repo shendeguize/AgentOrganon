@@ -49,9 +49,9 @@ export function confined(root, relative) {
   return target;
 }
 export function git(repo, ...args) { return execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
-export function gh(args, body) {
+export function gh(args, body, env = process.env) {
   return JSON.parse(execFileSync('gh', ['api', ...args, ...(body ? ['--input', '-'] : [])], {
-    input: body ? JSON.stringify(body) : undefined, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'],
+    input: body ? JSON.stringify(body) : undefined, env, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'],
   }) || 'null');
 }
 export function main(fn) { Promise.resolve().then(fn).catch(error => { console.error(error.message); process.exitCode = 1; }); }

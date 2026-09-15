@@ -5,9 +5,10 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { PRODUCTS, sha256, digest, readJSON, writeJSON, confined, gh, parseArgs, requireValue, main } from './lib.mjs';
-import { assertManifest, assertArtifact, assertDispatch, validateEvidence } from './manifest.mjs';
+import { assertManifest, assertArtifact, assertDispatch, validateEvidence, assertGithubReport } from './manifest.mjs';
 import { collectEvidenceClosure, fetchEvidenceClosure } from './evidence.mjs';
 import { validateStable } from './stable.mjs';
+import * as governance from './governance.mjs';
 
 export const assetName = item => item.file.endsWith('.tgz') ? path.basename(item.file) : `${item.sha256}-${path.basename(item.file)}`;
 const execute = (cmd, args, options = {}) => execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...options });
@@ -86,27 +87,43 @@ function ensureGithub(manifest, product, root, { coordinator = false } = {}) {
     assertTag(repository, tag, manifest.sources[product].commit);
   } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
 }
-export async function verifyPublished(manifest, root, products = Object.keys(PRODUCTS)) {
-  for (const product of products) {
-    const current = await registryVersion(product, manifest.version);
-    if (current?.dist?.integrity !== integrity(assertArtifact(root, manifest.artifacts[product]))) throw new Error(`Not all npm products are published with matching bytes: ${product}`);
-    const repository = manifest.sources[product].repository;
-    const release = getRelease(repository, `v${manifest.version}`);
-    if (!release || release.draft || release.prerelease !== (manifest.channel === 'rc')) throw new Error(`GitHub product not published: ${product}`);
-    assertTag(repository, `v${manifest.version}`, manifest.sources[product].commit);
-    const checks = [{ name: 'release-manifest.json', expected: sha256(`${JSON.stringify(manifest, null, 2)}\n`) },
-      ...((product === 'agent-organon' ? releaseFiles(manifest, root) : [manifest.artifacts[product]])).map(item => ({ name: assetName(item), expected: item.sha256 }))];
-    for (const item of checks) {
-      const asset = release.assets.find(value => value.name === item.name);
-      if (!asset) throw new Error(`GitHub artifact missing: ${product}/${item.name}`);
-      const bytes = execFileSync('gh', ['api', `repos/${repository}/releases/assets/${asset.id}`, '-H', 'Accept: application/octet-stream'], { maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
-      if (sha256(bytes) !== item.expected) throw new Error(`Downloaded GitHub bytes differ: ${product}/${item.name}`);
-    }
-    if (!current.dist?.tarball?.startsWith('https://registry.npmjs.org/')) throw new Error('Unexpected npm tarball origin');
-    const download = await fetch(current.dist.tarball);
-    if (!download.ok) throw new Error(`npm tarball download failed: ${product}`);
-    if (sha256(Buffer.from(await download.arrayBuffer())) !== manifest.artifacts[product].sha256) throw new Error(`Downloaded npm bytes differ: ${product}`);
+export async function recheckReleaseGovernance(manifest, inspect = governance.inspectReleaseGovernance) {
+  assertManifest(manifest);
+  const reports = [];
+  for (const product of Object.keys(PRODUCTS)) {
+    const report = await inspect(manifest.sources[product].repository);
+    assertGithubReport(report, product);
+    reports.push({ ...report, product });
   }
+  return reports;
+}
+export async function withReleaseGovernance(manifest, operation, inspect = governance.inspectReleaseGovernance) {
+  const reports = await recheckReleaseGovernance(manifest, inspect);
+  return operation(reports);
+}
+export async function verifyPublished(manifest, root, products = Object.keys(PRODUCTS), { inspect = governance.inspectReleaseGovernance } = {}) {
+  return withReleaseGovernance(manifest, async () => {
+    for (const product of products) {
+      const current = await registryVersion(product, manifest.version);
+      if (current?.dist?.integrity !== integrity(assertArtifact(root, manifest.artifacts[product]))) throw new Error(`Not all npm products are published with matching bytes: ${product}`);
+      const repository = manifest.sources[product].repository;
+      const release = getRelease(repository, `v${manifest.version}`);
+      if (!release || release.draft || release.prerelease !== (manifest.channel === 'rc')) throw new Error(`GitHub product not published: ${product}`);
+      assertTag(repository, `v${manifest.version}`, manifest.sources[product].commit);
+      const checks = [{ name: 'release-manifest.json', expected: sha256(`${JSON.stringify(manifest, null, 2)}\n`) },
+        ...((product === 'agent-organon' ? releaseFiles(manifest, root) : [manifest.artifacts[product]])).map(item => ({ name: assetName(item), expected: item.sha256 }))];
+      for (const item of checks) {
+        const asset = release.assets.find(value => value.name === item.name);
+        if (!asset) throw new Error(`GitHub artifact missing: ${product}/${item.name}`);
+        const bytes = execFileSync('gh', ['api', `repos/${repository}/releases/assets/${asset.id}`, '-H', 'Accept: application/octet-stream'], { maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+        if (sha256(bytes) !== item.expected) throw new Error(`Downloaded GitHub bytes differ: ${product}/${item.name}`);
+      }
+      if (!current.dist?.tarball?.startsWith('https://registry.npmjs.org/')) throw new Error('Unexpected npm tarball origin');
+      const download = await fetch(current.dist.tarball);
+      if (!download.ok) throw new Error(`npm tarball download failed: ${product}`);
+      if (sha256(Buffer.from(await download.arrayBuffer())) !== manifest.artifacts[product].sha256) throw new Error(`Downloaded npm bytes differ: ${product}`);
+    }
+  }, inspect);
 }
 async function fetchAsset(version, name, expected, destination) {
   const response = await fetch(`https://github.com/shendeguize/AgentOrganon/releases/download/v${version}/${encodeURIComponent(name)}`);
@@ -133,21 +150,23 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   if (operation === 'verify') { await verifyPublished(manifest, root); console.log(JSON.stringify({ status: 'passed' })); return; }
   const product = requireValue(args, 'product'); assertDispatch(manifest, process.env, product);
   if (manifest.channel === 'stable') await validateStable(manifest, root);
-  if (operation === 'bootstrap-bundle') {
-    if (product !== 'agent-organon') throw new Error('Only the coordinator publishes the validated bundle');
-    ensureGithub(manifest, product, root, { coordinator: true });
-  } else if (operation === 'publish') {
-    if (process.env.NPM_CHANNEL_STRATEGY === 'direct') await verifyPublished(manifest, root, Object.keys(PRODUCTS).slice(0, Object.keys(PRODUCTS).indexOf(product)));
-    await publishNpm(manifest, product, assertArtifact(root, manifest.artifacts[product]));
-    ensureGithub(manifest, product, root, { coordinator: product === 'agent-organon' });
-  } else if (operation === 'promote') {
-    await verifyPublished(manifest, root);
-    if (process.env.NPM_CHANNEL_STRATEGY === 'deferred') {
-      if (!process.env.NODE_AUTH_TOKEN) throw new Error('Deferred npm channel promotion requires a separately authorized tag-management credential; OIDC does not support dist-tag');
-      execute('npm', ['dist-tag', 'add', `${PRODUCTS[product].package}@${manifest.version}`, manifest.channel === 'rc' ? 'rc' : 'latest'], { stdio: 'inherit' });
-    } else if (process.env.NPM_CHANNEL_STRATEGY !== 'direct') throw new Error('Explicit approved NPM_CHANNEL_STRATEGY is required');
-    const release = getRelease(manifest.sources[product].repository, `v${manifest.version}`);
-    if (manifest.channel === 'stable') gh([`repos/${manifest.sources[product].repository}/releases/${release.id}`, '--method', 'PATCH'], { make_latest: 'true' });
-  } else throw new Error('Expected fetch, bootstrap-bundle, publish, promote or verify');
+  await withReleaseGovernance(manifest, async () => {
+    if (operation === 'bootstrap-bundle') {
+      if (product !== 'agent-organon') throw new Error('Only the coordinator publishes the validated bundle');
+      ensureGithub(manifest, product, root, { coordinator: true });
+    } else if (operation === 'publish') {
+      if (process.env.NPM_CHANNEL_STRATEGY === 'direct') await verifyPublished(manifest, root, Object.keys(PRODUCTS).slice(0, Object.keys(PRODUCTS).indexOf(product)));
+      await publishNpm(manifest, product, assertArtifact(root, manifest.artifacts[product]));
+      ensureGithub(manifest, product, root, { coordinator: product === 'agent-organon' });
+    } else if (operation === 'promote') {
+      await verifyPublished(manifest, root);
+      if (process.env.NPM_CHANNEL_STRATEGY === 'deferred') {
+        if (!process.env.NODE_AUTH_TOKEN) throw new Error('Deferred npm channel promotion requires a separately authorized tag-management credential; OIDC does not support dist-tag');
+        execute('npm', ['dist-tag', 'add', `${PRODUCTS[product].package}@${manifest.version}`, manifest.channel === 'rc' ? 'rc' : 'latest'], { stdio: 'inherit' });
+      } else if (process.env.NPM_CHANNEL_STRATEGY !== 'direct') throw new Error('Explicit approved NPM_CHANNEL_STRATEGY is required');
+      const release = getRelease(manifest.sources[product].repository, `v${manifest.version}`);
+      if (manifest.channel === 'stable') gh([`repos/${manifest.sources[product].repository}/releases/${release.id}`, '--method', 'PATCH'], { make_latest: 'true' });
+    } else throw new Error('Expected fetch, bootstrap-bundle, publish, promote or verify');
+  });
   console.log(JSON.stringify({ status: 'passed', operation, product, version: manifest.version, manifest_sha256: digest(manifest) }));
 });

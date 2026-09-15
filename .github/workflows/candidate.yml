@@ -52,6 +52,7 @@ jobs:
       - name: Freeze identical channel packages and gate reports
         env:
           GH_TOKEN: ${{ github.token }}
+          GOVERNANCE_AUDIT_TOKEN: ${{ secrets.GOVERNANCE_AUDIT_TOKEN }}
           APPROVED_RC_VERSION: ${{ inputs.approved_rc_version }}
           APPROVED_RC_MANIFEST_SHA256: ${{ vars.APPROVED_RC_MANIFEST_SHA256 }}
         run: node scripts/release/candidate.mjs --out candidate

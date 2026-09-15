@@ -18,6 +18,10 @@ Initial npm publication needs a short-lived, package-scoped `NPM_BOOTSTRAP_TOKEN
 
 `NPM_CHANNEL_STRATEGY` must reflect an explicit owner decision. `direct` publishes Core, AdvisedOrganons, then AgentOrganon directly to `rc` or `latest`; the CLI package is last and unified site recommendation waits for all three. `deferred` publishes temporary tags and requires a separate authorized `NPM_TAG_TOKEN` for channel promotion. OIDC supports publication, not `npm dist-tag`. No strategy is implicitly selected.
 
+Each repository also needs a short-lived `GOVERNANCE_AUDIT_TOKEN` secret restricted to these three repositories, with Administration read and Actions read permissions. Candidate creation, publication and Pages verification check the complete branch/tag rules, Actions permissions and environments. When REST omits bypass actor details, the audit uses the exact ruleset's GraphQL total count; hidden actor nodes are never counted as zero. Missing permissions, hidden counts or failed settings block release. Validate the new credential against a known nonzero bypass count as well as these repositories. See [ruleset visibility](https://docs.github.com/en/rest/repos/rules#get-a-repository-ruleset) and [Actions permission inspection](https://docs.github.com/en/rest/actions/permissions#get-github-actions-permissions-for-a-repository).
+
+The audit credential is available only to fixed verification/publication steps and is removed from the process environment when the governance module loads. Only the read-only GitHub audit adapter receives it; npm, site builders and other child processes do not inherit it. Every publication and channel verification rechecks all three repositories to catch configuration drift after candidate sealing.
+
 ## Candidate procedure
 
 1. Merge reviewed sources into the candidate branch and run **Candidate validation** (`candidate.yml`) from its exact commit. It builds all three packages once, checks content, sites, governance and Lean readers, and runs native Linux/macOS/Windows installer lifecycles against the actual candidate packages. Keep `candidate-packages-{attempt}` and its canonical manifest digest.

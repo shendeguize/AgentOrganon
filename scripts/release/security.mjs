@@ -12,20 +12,20 @@ export const environmentPlan = repository => [
     { name: 'release-validation', branches: ['release/1.0.0'], review: true },
   ] : []),
 ];
-export function inspectSecurity(repository) {
+export function inspectSecurity(repository, api = gh) {
   allowedRepository(repository);
-  const actions = gh([`repos/${repository}/actions/permissions`]);
-  const workflow = gh([`repos/${repository}/actions/permissions/workflow`]);
+  const actions = api([`repos/${repository}/actions/permissions`]);
+  const workflow = api([`repos/${repository}/actions/permissions/workflow`]);
   const missing = [];
   if (!actions.enabled || actions.sha_pinning_required !== true) missing.push('full Action revision pinning');
   if (workflow.default_workflow_permissions !== 'read' || workflow.can_approve_pull_request_reviews !== false) missing.push('read-only default token without PR approval');
   const environments = [];
   for (const wanted of environmentPlan(repository)) {
     let actual;
-    try { actual = gh([`repos/${repository}/environments/${wanted.name}`]); }
+    try { actual = api([`repos/${repository}/environments/${wanted.name}`]); }
     catch (error) { if (!String(error.stderr || error.message).includes('404')) throw error; missing.push(`environment ${wanted.name}`); continue; }
     if (actual.deployment_branch_policy?.protected_branches !== false || actual.deployment_branch_policy?.custom_branch_policies !== true) missing.push(`${wanted.name}: exact deployment branches`);
-    const branches = gh([`repos/${repository}/environments/${wanted.name}/deployment-branch-policies`]).branch_policies;
+    const branches = api([`repos/${repository}/environments/${wanted.name}/deployment-branch-policies`]).branch_policies;
     if (branches.some(item => item.type !== 'branch') || branches.map(item => item.name).sort().join() !== [...wanted.branches].sort().join()) missing.push(`${wanted.name}: deployment branch list`);
     const reviewer = actual.protection_rules.find(item => item.type === 'required_reviewers');
     if (wanted.review && (!reviewer || reviewer.prevent_self_review !== false || reviewer.reviewers.length !== 1 || reviewer.reviewers[0].reviewer.login !== 'shendeguize' || actual.can_admins_bypass !== false)) missing.push(`${wanted.name}: owner approval without administrator bypass`);

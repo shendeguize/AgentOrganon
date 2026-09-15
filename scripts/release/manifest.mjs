@@ -30,6 +30,11 @@ export function assertArtifact(root, artifact) {
   if (!fs.statSync(file).isFile() || sha256(fs.readFileSync(file)) !== artifact.sha256) throw new Error(`Artifact checksum mismatch: ${artifact.file}`);
   return file;
 }
+export function assertGithubReport(report, product) {
+  const repository = PRODUCTS[product] && `shendeguize/${PRODUCTS[product].repo}`;
+  if (!repository || report?.status !== 'passed' || report.repository !== repository || report.security?.status !== 'passed' || report.security.repository !== repository) throw new Error(`Missing, failed or unrelated GitHub governance/security inspection: ${product}`);
+  return report;
+}
 export function validateEvidence(manifest, root, options = {}) {
   assertManifest(manifest);
   validateTrustedEvidence(manifest, root, options);
@@ -37,6 +42,7 @@ export function validateEvidence(manifest, root, options = {}) {
     const report = readJSON(assertArtifact(root, item));
     if (report.status !== 'passed' || report.source_digest !== manifest.source_digest || report.artifact_digest !== digest(manifest.artifacts)) throw new Error(`Unsuccessful or unrelated evidence: ${item.file}`);
     if (report.gate === 'agents') validateApprovedAgentReport(root, report);
+    if (report.gate === 'github') assertGithubReport(report, report.product);
     return report;
   });
   for (const gate of ['content', 'site', 'package', 'github']) {

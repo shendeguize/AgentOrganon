@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { buildPackage } from '../package/build.mjs';
 import { checkContent } from './content.mjs';
-import { inspect as checkGithub } from './governance.mjs';
+import * as governance from './governance.mjs';
 import { PRODUCTS, sha256, digest, readJSON, writeJSON, git, parseArgs, requireValue, main } from './lib.mjs';
-import { sourceIdentity, assertManifest } from './manifest.mjs';
+import { sourceIdentity, assertManifest, assertGithubReport } from './manifest.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 function run(command, args, cwd) {
@@ -14,7 +14,13 @@ function run(command, args, cwd) {
   if (result.error || result.status !== 0) throw new Error(`${command} failed in ${cwd}: ${result.error?.message || result.stderr || result.stdout}`);
   return result.stdout;
 }
-main(async () => {
+export async function collectGithubReport(product, inspect = governance.inspectReleaseGovernance) {
+  if (!PRODUCTS[product]) throw new Error('Unknown release product');
+  const report = await inspect(`shendeguize/${PRODUCTS[product].repo}`);
+  assertGithubReport(report, product);
+  return { ...report, gate: 'github', product };
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main(async () => {
   const options = parseArgs(); const out = path.resolve(requireValue(options, 'out')); const version = options.version || readJSON(path.join(ROOT, 'package.json')).version;
   if (fs.existsSync(path.join(out, 'release-manifest.json'))) throw new Error('Candidate destination already contains a manifest; preserve it and use a new directory');
   fs.mkdirSync(out, { recursive: true });
@@ -40,7 +46,7 @@ main(async () => {
       const output = run(process.execPath, [repo === ROOT ? 'scripts/release/site.mjs' : 'scripts/site.mjs', 'check'], repo);
       addReport(`${product}-site`, { gate: 'site', product, status: 'passed', output });
     }
-    if (!options['skip-github']) addReport(`${product}-github`, { ...(await checkGithub(`shendeguize/${spec.repo}`)), gate: 'github', product });
+    if (!options['skip-github']) addReport(`${product}-github`, await collectGithubReport(product));
   }
   for (const { name, report } of pendingReports) {
     const file = `reports/${name}.json`;

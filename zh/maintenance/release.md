@@ -18,6 +18,10 @@
 
 `NPM_CHANNEL_STRATEGY` 必须对应所有者的明确决定。`direct` 按 Core、AdvisedOrganons、AgentOrganon 顺序直接发布到 `rc` 或 `latest`，CLI 包最后发布，统一站点推荐仍等待三包完成。`deferred` 先发布临时 tag，之后用单独获准的 `NPM_TAG_TOKEN` 晋升渠道。OIDC 支持发布，不支持 `npm dist-tag`。流程不隐式选择策略。
 
+每仓还需配置短期 `GOVERNANCE_AUDIT_TOKEN` Secret，仅限这三个仓库，权限为 Administration read 和 Actions read。候选构建、发布和 Pages 验证会检查完整分支／tag 规则、Actions 权限和 Environment。REST 隐藏 bypass actor 明细时，审计读取同一 ruleset 的 GraphQL 总数，不把隐藏的 actor 节点计为零。权限不足、计数不可见或配置不合格均阻断发布。新凭据应同时以已知非零 bypass 的对照和这三个仓库验收。参见 [ruleset 可见性](https://docs.github.com/en/rest/repos/rules#get-a-repository-ruleset)和 [Actions 权限检查](https://docs.github.com/en/rest/actions/permissions#get-github-actions-permissions-for-a-repository)。
+
+审计凭据仅注入固定验证／发布步骤；治理模块加载后立即从进程环境移除。只有只读 GitHub 审计适配器接收它，npm、站点构建及其他子进程不会继承。每次发布和渠道验证都会重新检查三个仓库，发现候选封存后的配置变化。
+
 ## 候选流程
 
 1. 将审查后的来源合入候选分支，在精确 commit 上运行 `candidate.yml`。它一次构建三个内容包，检查文档、站点、治理、Lean 读者稿，并在原生 Linux/macOS/Windows 中对实际候选包验证安装生命周期。保存 `candidate-packages-{attempt}` 及规范化 manifest digest。
