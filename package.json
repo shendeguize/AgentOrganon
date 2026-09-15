@@ -1,0 +1,33 @@
+{
+  "name": "@shendeguize/agent-organon",
+  "version": "1.0.0-rc.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node scripts/test.mjs",
+    "check:content": "node scripts/release/content.mjs",
+    "build:site": "node scripts/release/site.mjs build",
+    "check:site": "node scripts/release/site.mjs check",
+    "build:package": "node scripts/package/build.mjs",
+    "check:package": "node scripts/package/check.mjs",
+    "test:install": "node scripts/release/install-matrix.mjs",
+    "test:agents": "node scripts/agents/run.mjs",
+    "check:github": "node scripts/release/governance.mjs check",
+    "check:release": "node scripts/release/manifest.mjs check"
+  },
+  "organon": {
+    "coreVersion": ">=0.1.0 <0.2.0"
+  },
+  "description": "Philosophy selection, assessment and revision tools for agent workspaces",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shendeguize/AgentOrganon.git"
+  },
+  "bin": {
+    "organon": "installer/organon.mjs"
+  }
+}

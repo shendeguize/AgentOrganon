@@ -1,0 +1,34 @@
+# Private goal workspaces (never committed)
+.local/
+
+# Agent / tool state
+.codegraph/
+.claude/settings.local.json
+.cursor/
+.copilot/
+*.log
+
+# Build outputs
+target/
+dist/
+build/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json

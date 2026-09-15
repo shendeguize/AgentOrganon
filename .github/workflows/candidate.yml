@@ -1,0 +1,107 @@
+name: Candidate validation
+on:
+  workflow_dispatch:
+    inputs:
+      approved_rc_version:
+        description: For stable preparation only, exact previously approved RC
+        required: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: candidate-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.repository == 'shendeguize/AgentOrganon' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/1.0.0')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      artifact_id: ${{ steps.packages.outputs.artifact-id }}
+      attempt: ${{ steps.identity.outputs.attempt }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.2'
+      - run: npm ci --ignore-scripts
+        working-directory: OrganonCore/tools/site
+      - name: Install pinned Lean toolchain in temporary runner storage
+        env:
+          ELAN_HOME: ${{ runner.temp }}/organon-elan
+        run: |
+          mkdir -p "$RUNNER_TEMP/organon-elan-bootstrap"
+          curl --proto '=https' --tlsv1.2 --fail --location https://github.com/leanprover/elan/releases/download/v4.2.4/elan-x86_64-unknown-linux-gnu.tar.gz --output "$RUNNER_TEMP/organon-elan-bootstrap/elan.tar.gz"
+          echo "42b94d4244e8353142c456ec0e4ca6528fd898a6c604d4059f494e706e431f63  $RUNNER_TEMP/organon-elan-bootstrap/elan.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/organon-elan-bootstrap/elan.tar.gz" -C "$RUNNER_TEMP/organon-elan-bootstrap"
+          "$RUNNER_TEMP/organon-elan-bootstrap/elan-init" -y --no-modify-path --default-toolchain leanprover/lean4:v4.33.1
+          "$ELAN_HOME/bin/elan" toolchain install leanprover/lean4:v4.33.1
+          echo "ELAN_HOME=$ELAN_HOME" >> "$GITHUB_ENV"
+          echo "$ELAN_HOME/bin" >> "$GITHUB_PATH"
+      - name: Source, declaration and reader gates
+        run: |
+          npm test
+          npm --prefix OrganonCore test
+          npm --prefix AdvisedOrganons test
+          node OrganonCore/skills/organon-core-leanify-prove/scripts/check.js OrganonCore/lean/philosophy --manuscript manuscript.json
+          node OrganonCore/skills/organon-core-leanify-prove/scripts/check.js AdvisedOrganons/SoftwareEngineering/lean/philosophy --manuscript manuscript.json
+      - name: Freeze identical channel packages and gate reports
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GOVERNANCE_AUDIT_TOKEN: ${{ secrets.GOVERNANCE_AUDIT_TOKEN }}
+          APPROVED_RC_VERSION: ${{ inputs.approved_rc_version }}
+          APPROVED_RC_MANIFEST_SHA256: ${{ vars.APPROVED_RC_MANIFEST_SHA256 }}
+        run: node scripts/release/candidate.mjs --out candidate
+      - id: identity
+        run: node -e 'require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT,"attempt="+process.env.GITHUB_RUN_ATTEMPT+"\n")'
+      - id: packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-packages-${{ github.run_attempt }}
+          path: candidate/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Display candidate identity for subsequent explicit validation
+        run: node --input-type=module -e 'import {digest,readJSON} from "./scripts/release/lib.mjs"; console.log(digest(readJSON("candidate/release-manifest.json")))'
+  install:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.2'
+      - name: Require a complete rerun attempt
+        env:
+          BUILD_ATTEMPT: ${{ needs.build.outputs.attempt }}
+        run: node -e 'if(process.env.BUILD_ATTEMPT!==process.env.GITHUB_RUN_ATTEMPT) throw Error("Use Rerun all jobs; cannot borrow build artifacts from an older attempt")'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          merge-multiple: true
+          path: candidate
+      - name: Actual isolated install lifecycle
+        run: node scripts/release/install-matrix.mjs --manifest candidate/release-manifest.json --out candidate/reports/install-${{ runner.os }}.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: install-${{ runner.os }}-${{ github.run_attempt }}
+          path: candidate/reports/install-*
+          if-no-files-found: error
+          retention-days: 30

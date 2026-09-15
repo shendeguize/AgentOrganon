@@ -1,0 +1,17 @@
+# Normalize line endings: LF in the repository, LF on checkout.
+* text=auto eol=lf
+
+# Sources that must stay byte-stable (content hashes depend on them)
+*.md    text eol=lf
+*.jsonl text eol=lf
+*.json  text eol=lf
+*.toml  text eol=lf
+*.yml   text eol=lf
+
+# Generated artifacts: hide from diffs and language stats
+PHILOSOPHY.lock.json    linguist-generated=true
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.gif binary
