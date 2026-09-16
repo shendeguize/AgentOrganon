@@ -105,12 +105,16 @@ test('preview Pages deploy current main without creating verified release state'
     assert.match(workflow, /deploy:[\s\S]*?permissions:\n      pages: write\n      id-token: write/);
     const actions = [...workflow.matchAll(/uses: ([^\s]+)/g)].map(match => match[1]);
     assert(actions.every(action => /@[a-f0-9]{40}$/.test(action)));
-    assert(actions.includes('actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa'));
+    assert(actions.includes('actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02'));
+    assert(!actions.some(action => action.startsWith('actions/upload-pages-artifact@')));
     assert(actions.includes('actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e'));
     assert.match(workflow, /actions\/checkout@[a-f0-9]{40}[\s\S]*?persist-credentials: false/);
     assert.match(workflow, /deploy:\n    needs: build/);
-    assert.match(workflow, new RegExp(`path: ${output.replaceAll('/', '\\/')}`));
-    assert(workflow.indexOf('run: npm run check:site') < workflow.indexOf('actions/upload-pages-artifact@'));
+    assert.match(workflow, new RegExp(`--directory ${output.replaceAll('/', '\\/')}`));
+    assert.match(workflow, /name: github-pages-\$\{\{ github\.run_attempt \}\}[\s\S]*?path: \$\{\{ runner\.temp \}\}\/artifact\.tar/);
+    assert.match(workflow, /deploy-pages@[a-f0-9]{40}[\s\S]*?artifact_name: github-pages-\$\{\{ github\.run_attempt \}\}/);
+    assert(workflow.indexOf('run: npm run check:site') < workflow.indexOf('name: Archive Pages artifact'));
+    assert(workflow.indexOf('name: Archive Pages artifact') < workflow.indexOf('actions/upload-artifact@'));
     assert.doesNotMatch(workflow, /contents: write|site-data\.mjs|GOVERNANCE_AUDIT_TOKEN|release-manifest/);
   }
   const builder = fs.readFileSync(path.join(workspace, 'OrganonCore/tools/site/build.mjs'), 'utf8');
