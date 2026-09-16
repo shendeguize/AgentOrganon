@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PRODUCTS, digest, writeJSON } from '../scripts/release/lib.mjs';
 import { sourceIdentity } from '../scripts/release/manifest.mjs';
 import { assertSiteRunner, inventory, validateState, sampleStars, installPublic, buildIdentity, verifyForSite, checkoutState } from '../scripts/release/site-data.mjs';
+const workspace = fileURLToPath(new URL('../', import.meta.url));
 const repository = 'shendeguize/AgentOrganon';
 function temporary(t) { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'organon-site-state-')); t.after(() => fs.rmSync(root, { recursive: true, force: true })); return root; }
 function manifest(version = '1.0.0-rc.1') {
@@ -82,4 +84,40 @@ test('data branch distinguishes first creation from existing branch and network 
     assert.equal(calls.some(args=>args.includes('--force') || args.includes('push')),false);
     assert(calls.find(args=>args.includes('ls-remote')).includes('refs/heads/site-data'));
   }
+});
+
+test('preview Pages deploy current main without creating verified release state', () => {
+  const workflows = [
+    ['', 'shendeguize/AgentOrganon', 'product/dist/site/'],
+    ['OrganonCore', 'shendeguize/OrganonCore', 'product/dist/site/'],
+    ['AdvisedOrganons', 'shendeguize/AdvisedOrganons', 'product/dist/site/'],
+  ];
+  for (const [relative, expectedRepository, output] of workflows) {
+    const workflow = fs.readFileSync(path.join(workspace, relative, '.github/workflows/preview-pages.yml'), 'utf8');
+    assert.match(workflow, /^name: Preview Pages\non:\n  workflow_dispatch:\npermissions: \{\}\n/);
+    assert.equal((workflow.match(/^  workflow_dispatch:$/gm) || []).length, 1);
+    assert.doesNotMatch(workflow, /^  (push|pull_request|schedule|workflow_call):/m);
+    assert.match(workflow, new RegExp(`  build:\n    if: github\\.repository == '${expectedRepository}' && github\\.ref == 'refs/heads/main'`));
+    assert.match(workflow, /group: site-data-\$\{\{ github\.repository \}\}/);
+    assert.match(workflow, /ORGANON_SITE_PREVIEW: 'true'/);
+    assert.equal((workflow.match(/permissions:/g) || []).length, 3);
+    assert.match(workflow, /build:[\s\S]*?permissions:\n      contents: read/);
+    assert.match(workflow, /deploy:[\s\S]*?permissions:\n      pages: write\n      id-token: write/);
+    const actions = [...workflow.matchAll(/uses: ([^\s]+)/g)].map(match => match[1]);
+    assert(actions.every(action => /@[a-f0-9]{40}$/.test(action)));
+    assert(actions.includes('actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa'));
+    assert(actions.includes('actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e'));
+    assert.match(workflow, /actions\/checkout@[a-f0-9]{40}[\s\S]*?persist-credentials: false/);
+    assert.match(workflow, /deploy:\n    needs: build/);
+    assert.match(workflow, new RegExp(`path: ${output.replaceAll('/', '\\/')}`));
+    assert(workflow.indexOf('run: npm run check:site') < workflow.indexOf('actions/upload-pages-artifact@'));
+    assert.doesNotMatch(workflow, /contents: write|site-data\.mjs|GOVERNANCE_AUDIT_TOKEN|release-manifest/);
+  }
+  const builder = fs.readFileSync(path.join(workspace, 'OrganonCore/tools/site/build.mjs'), 'utf8');
+  const layout = fs.readFileSync(path.join(workspace, 'OrganonCore/tools/site/theme/Layout.vue'), 'utf8');
+  assert.match(builder, /preview: process\.env\.ORGANON_SITE_PREVIEW === 'true'/);
+  assert.match(layout, /Source preview · not a release/);
+  assert.match(layout, /源码预览 · 非发行版/);
+  assert.match(layout, /Release candidate · awaiting review/);
+  assert.match(layout, /Stable release/);
 });
